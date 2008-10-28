@@ -1,6 +1,6 @@
 package com.codecommit.stm
 
-import collection._
+import scala.collection._
 
 final class Transaction private[stm] (val rev: Int) extends Context {
   private[stm] val world = mutable.Map[Ref[Any], Any]()
