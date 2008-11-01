@@ -1,7 +1,15 @@
 package com.codecommit.stm
 
-class Ref[T](v: T) {
-  private var contents_ = (v, 0)    // atomically bind value to revision
+sealed trait Source[+T] {
+  def get(implicit c: Context): T
+}
+
+sealed trait Sink[-T] {
+  def :=(v: T)(implicit c: Transaction): Unit
+}
+
+final class Ref[T](v: T) extends Source[T] with Sink[T] {
+  private var _contents = (v, 0)    // atomically bind value to revision
   
   private var blocks = Set[AnyRef]()
   
@@ -23,10 +31,10 @@ class Ref[T](v: T) {
   
   override def toString = value.toString
   
-  private[stm] def contents = contents_
+  private[stm] def contents = _contents
   
   private[stm] def contents_=(v: (T, Int)) {
-    contents_ = v
+    _contents = v
     
     blocks foreach { _.notifyAll() }
   }
