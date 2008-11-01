@@ -65,7 +65,7 @@ object Transaction {
     back
   }
   
-  implicit def refToValue[T](ref: Ref[T])(implicit c: Context) = ref.get(c)
+  implicit def sourceToValue[T](src: Source[T])(implicit c: Context) = src.get(c)
   
   def atomic[A](f: (Transaction)=>A): A = atomic(true)(f)
   
