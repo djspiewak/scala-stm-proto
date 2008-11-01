@@ -56,12 +56,12 @@ final class Transaction private[stm] (val rev: Int) extends Context {
 }
 
 object Transaction {
-  private var rev_ = 1
+  private var _rev = 1
   private val revLock = new AnyRef
   
   private def rev = revLock.synchronized {
-    val back = rev_
-    rev_ += 1
+    val back = _rev
+    _rev += 1
     back
   }
   
@@ -99,7 +99,7 @@ object Transaction {
             throw e
           }
           
-          case _ => attemptTransact()    // if exception, assume conflict and retry
+          case _ => attemptTransact()    // TODO  if exception, assume conflict and retry
         }
       } else null.asInstanceOf[A]
     }

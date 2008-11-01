@@ -1,13 +1,22 @@
 package com.codecommit.stm
 
-trait Source[+T] {
+/*
+ * I would like to make this Source/Sink hierarchy a little
+ * more permissive (allowing third-party extension).  However,
+ * at the moment the `Transaction` class has some static
+ * dependencies on `Ref`.  Hence, the self-types.
+ */
+
+sealed trait Source[+T] { this: Ref[T] =>     // TODO
   def unary_*(implicit c: Context) = get(c)
   
-  def get(implicit c: Context): T
+  def get(implicit c: Context) = c retrieve this
 }
 
-trait Sink[-T] {
-  def :=(v: T)(implicit c: Transaction): Unit
+sealed trait Sink[-T] { this: Ref[T] =>       // TODO
+  def :=(v: T)(implicit c: Transaction) {
+    c.store(this)(v)
+  }
 }
 
 final class Ref[T](v: T) extends Source[T] with Sink[T] {
@@ -20,12 +29,6 @@ final class Ref[T](v: T) extends Source[T] with Sink[T] {
    * default for the given type instantiation.
    */
   def this() = this(null.asInstanceOf[T])
-  
-  def get(implicit c: Context) = c retrieve this
-  
-  def :=(v: T)(implicit c: Transaction) {
-    c.store(this)(v)
-  }
   
   override def toString = value.toString
   
