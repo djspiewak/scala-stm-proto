@@ -136,7 +136,6 @@ object Transaction {
   }
   
   private case object RetryMessage extends RuntimeException
-  private case class FailureException(e: Throwable) extends RuntimeException
 }
 
 private[stm] object CommitLock
