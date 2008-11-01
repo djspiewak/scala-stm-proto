@@ -1,10 +1,12 @@
 package com.codecommit.stm
 
-sealed trait Source[+T] {
+trait Source[+T] {
+  def unary_*(implicit c: Context) = get(c)
+  
   def get(implicit c: Context): T
 }
 
-sealed trait Sink[-T] {
+trait Sink[-T] {
   def :=(v: T)(implicit c: Transaction): Unit
 }
 
@@ -19,10 +21,6 @@ final class Ref[T](v: T) extends Source[T] with Sink[T] {
    */
   def this() = this(null.asInstanceOf[T])
   
-  /**
-   * Alright, ballot time: who wants a unary_*(Context) method
-   * as syntax sugar for this?  Anyone?  :-)
-   */
   def get(implicit c: Context) = c retrieve this
   
   def :=(v: T)(implicit c: Transaction) {
