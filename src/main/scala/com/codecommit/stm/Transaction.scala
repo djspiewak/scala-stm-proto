@@ -45,6 +45,10 @@ final class Transaction private[stm] (val rev: Int) extends Context {
         
         if (back) {
           for (ref <- writes) {
+            for (t <- Transaction.active) {
+              t.retrieve(ref)
+            }
+            
             ref.contents = (world(ref), rev)
           }
         }
@@ -59,10 +63,26 @@ object Transaction {
   private var _rev = 1
   private val revLock = new AnyRef
   
+  private var _active = Set[Transaction]()
+  
   private def rev = revLock.synchronized {
     val back = _rev
     _rev += 1
     back
+  }
+  
+  private[Transaction] def active = _active
+  
+  private def activate(t: Transaction) {
+    _active.synchronized {
+      _active = _active + t
+    }
+  }
+  
+  private def deactivate(t: Transaction) {
+    _active.synchronized {
+      _active = _active - t
+    }
   }
   
   implicit def sourceToValue[T](src: Source[T])(implicit c: Context) = src.get(c)
@@ -73,11 +93,15 @@ object Transaction {
     def attemptTransact(): A = {
       if (cond) {
         val trans = new Transaction(rev)
+        activate(trans)
         
         try {
           val result = f(trans)
           
-          if (trans.commit()) result else attemptTransact()
+          if (trans.commit()) result else {
+            deactivate(trans)
+            attemptTransact()
+          }
         } catch {
           case RetryMessage => {      // on retry(), wait for a change and then try again
             val block = new AnyRef
@@ -92,14 +116,11 @@ object Transaction {
               ref.deregisterBlock(block)
             }
             
+            deactivate(trans)
             attemptTransact()
           }
           
-          case FailureException(e) => {     // propagate exception 
-            throw e
-          }
-          
-          case _ => attemptTransact()    // TODO  if exception, assume conflict and retry
+          //case _ => attemptTransact()    // TODO  if exception, assume conflict and retry
         }
       } else null.asInstanceOf[A]
     }
@@ -113,10 +134,6 @@ object Transaction {
   
   def check(c: Boolean)(implicit t: Transaction) {
     if (c) retry()
-  }
-  
-  def fail(e: Throwable)(implicit t: Transaction) {
-    throw FailureException(e)
   }
   
   private case object RetryMessage extends RuntimeException
