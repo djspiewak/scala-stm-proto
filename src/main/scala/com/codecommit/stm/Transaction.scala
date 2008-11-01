@@ -106,6 +106,8 @@ object Transaction {
           case RetryMessage => {      // on retry(), wait for a change and then try again
             val block = new AnyRef
             
+            deactivate(trans)
+            
             for ((ref, _) <- trans.world) {
               ref.registerBlock(block)
             }
@@ -116,11 +118,8 @@ object Transaction {
               ref.deregisterBlock(block)
             }
             
-            deactivate(trans)
             attemptTransact()
           }
-          
-          //case _ => attemptTransact()    // TODO  if exception, assume conflict and retry
         }
       } else null.asInstanceOf[A]
     }
