@@ -1,12 +1,12 @@
 package com.codecommit.stm
 
-sealed trait Source[+T] {
+trait Source[+T] {
   def unary_*(implicit c: Context) = get(c)
   
   def get(implicit c: Context): T
 }
 
-sealed trait Sink[-T] {
+trait Sink[-T] {
   def :=(v: T)(implicit c: Transaction): Unit
 }
 
