@@ -40,7 +40,7 @@ final class Transaction private[stm] (val rev: Int) extends Context {
   private[stm] def commit() = {
     if (world.size > 0) {
       CommitLock.synchronized {
-        back = world forall { 
+        val back = world forall { 
           case (ref, _) => ref.rev == version(ref) 
         }
         
