@@ -8,24 +8,21 @@ final class Transaction private[stm] (val rev: Int) extends Context {
   private val writes = mutable.Set[Ref[Any]]()
   private val version = mutable.Map[Ref[Any], Int]()
   
-  private[stm] def retrieve[T](ref: Ref[T]) = /* world.synchronized */ {
+  private[stm] def retrieve[T](ref: Ref[T]) = world.synchronized {
     val castRef = ref.asInstanceOf[Ref[Any]]
     
     if (!world.contains(castRef)) {
       val (value, refRev) = ref.contents
       
       world(castRef) = value
-      
-      if (!version.contains(castRef)) {
-        version(castRef) = refRev
-      }
+      version(castRef) = refRev
     }
     
     world(castRef).asInstanceOf[T]
   }
   
   private[stm] def store[T](ref: Ref[T])(v: T) {
-    // world.synchronized {
+    world.synchronized {
       val castRef = ref.asInstanceOf[Ref[Any]]
       
       if (!version.contains(castRef)) {
@@ -34,21 +31,21 @@ final class Transaction private[stm] (val rev: Int) extends Context {
       
       world(castRef) = v
       writes += castRef
-    // }
+    }
   }
   
   private[stm] def commit() = {
     if (world.size > 0) {
       CommitLock.synchronized {
         val back = world forall { 
-          case (ref, _) => ref.rev == version(ref) 
+          case (ref, _) => ref.rev == version(ref)
         }
         
         if (back) {
           for (ref <- writes) {
-            // for (t <- Transaction.active) {
+            for (t <- Transaction.active) {
               // t.retrieve(ref)
-            // }
+            }
             
             ref.contents = (world(ref), rev)
           }
@@ -64,7 +61,7 @@ object Transaction {
   private var _rev = 1
   private val revLock = new AnyRef
   
-  private var _active = Set[Transaction]()
+  private val _active = new mutable.HashSet[Transaction] with mutable.SynchronizedSet[Transaction]
   
   private def rev = revLock.synchronized {
     val back = _rev
@@ -75,15 +72,11 @@ object Transaction {
   private[Transaction] def active = _active
   
   private def activate(t: Transaction) {
-    _active.synchronized {
-      _active += t
-    }
+    _active += t
   }
   
   private def deactivate(t: Transaction) {
-    _active.synchronized {
-      _active = _active - t
-    }
+    _active -= t
   }
   
   implicit def sourceToValue[T](src: Source[T])(implicit c: Context) = src.get(c)
