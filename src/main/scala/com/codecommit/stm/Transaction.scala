@@ -8,7 +8,7 @@ final class Transaction private[stm] (val rev: Int) extends Context {
   private val writes = mutable.Set[Ref[Any]]()
   private val version = mutable.Map[Ref[Any], Int]()
   
-  private[stm] def retrieve[T](ref: Ref[T]) = {
+  private[stm] def retrieve[T](ref: Ref[T]) = world.synchronized {
     val castRef = ref.asInstanceOf[Ref[Any]]
     
     if (!world.contains(castRef)) {
@@ -25,14 +25,16 @@ final class Transaction private[stm] (val rev: Int) extends Context {
   }
   
   private[stm] def store[T](ref: Ref[T])(v: T) {
-    val castRef = ref.asInstanceOf[Ref[Any]]
-    
-    if (!version.contains(castRef)) {
-      version(castRef) = ref.rev
+    world.synchronized {
+      val castRef = ref.asInstanceOf[Ref[Any]]
+      
+      if (!version.contains(castRef)) {
+        version(castRef) = ref.rev
+      }
+      
+      world(castRef) = v
+      writes += castRef
     }
-    
-    world(castRef) = v
-    writes += castRef
   }
   
   private[stm] def commit() = {
@@ -60,6 +62,8 @@ final class Transaction private[stm] (val rev: Int) extends Context {
 }
 
 object Transaction {
+  import Context.LiveContext
+  
   private var _rev = 1
   private val revLock = new AnyRef
   
@@ -75,7 +79,7 @@ object Transaction {
   
   private def activate(t: Transaction) {
     _active.synchronized {
-      _active = _active + t
+      _active += t
     }
   }
   
