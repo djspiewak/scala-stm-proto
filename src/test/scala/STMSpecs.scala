@@ -43,6 +43,13 @@ object STMSpecs extends Specification {
   }
   
   "transactions" should {
+    "return values" in {
+      val ref = new Ref(42)
+      
+      def retrieve(implicit t: Transaction) = ref
+      atomic(retrieve(_)) mustEqual 42
+    }
+    
     "isolate changes" in {
       val ref = new Ref(42)
       
