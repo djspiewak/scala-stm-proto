@@ -144,6 +144,34 @@ object STMSpecs extends Specification {
       !ref mustEqual 31
       runs mustEqual 2
     }
+    
+    "handle scads of conflicts" in {
+      val NUM = 2000
+      val IT = 10
+      
+      val ref = new Ref[Int]
+      
+      !ref mustEqual 0
+      
+      def modify(implicit t: Transaction) {
+        for (_ <- 0 until IT) {
+          ref := ref + 1
+        }
+      }
+      
+      val pool = (0 until NUM).foldRight(List[Thread]()) { (i, ls) =>
+        val t = thread {
+          atomic(modify(_))
+        }
+        
+        t :: ls
+      }
+      
+      pool foreach { _.start() }
+      pool foreach { _.join() }
+      
+      !ref mustEqual (IT * NUM)
+    }
   }
   
   def thread(f: =>Unit): Thread = new Thread {
