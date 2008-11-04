@@ -86,7 +86,7 @@ object STMSpecs extends Specification {
         runs += 1
         
         val x = !ref
-        Thread.sleep(250)    // create conflict
+        Thread.sleep(500)    // create conflict
         
         ref := x + 10
       }
@@ -120,7 +120,7 @@ object STMSpecs extends Specification {
       def modify2(implicit t: Transaction) {
         runs += 1
         
-        Thread.sleep(250)
+        Thread.sleep(500)
         
         if (runs == 1) {
           !ref mustEqual 42     // changed in global context, but not here!
@@ -146,8 +146,8 @@ object STMSpecs extends Specification {
     }
     
     "handle scads of conflicts" in {
-      val NUM = 2000
-      val IT = 10
+      val NUM = 200
+      val IT = 100
       
       val ref = new Ref[Int]
       
