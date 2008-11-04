@@ -1,7 +1,7 @@
 package com.codecommit.stm
 
 trait Source[+T] {
-  def unary_*(implicit c: Context) = get(c)
+  def unary_!(implicit c: Context) = get(c)
   
   def get(implicit c: Context): T
 }
