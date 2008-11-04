@@ -5,46 +5,62 @@ import scala.collection._
 final class Transaction private[stm] (val rev: Int) extends Context {
   private[stm] val world = mutable.Map[Ref[Any], Any]()
   
+  private val reads = mutable.Set[Ref[Any]]()
   private val writes = mutable.Set[Ref[Any]]()
   private val version = mutable.Map[Ref[Any], Int]()
   
-  private[stm] def retrieve[T](ref: Ref[T]) = world.synchronized {
+  private[stm] def retrieve[T](ref: Ref[T]) = {
     val castRef = ref.asInstanceOf[Ref[Any]]
+    reads += castRef
     
-    if (!world.contains(castRef)) {
-      val (value, refRev) = ref.contents
+    world.synchronized {
+      if (!world.contains(castRef)) {
+        val (value, refRev) = ref.contents
+        
+        world(castRef) = value
+        version(castRef) = refRev
+      }
       
-      world(castRef) = value
-      version(castRef) = refRev
+      world(castRef).asInstanceOf[T]
     }
-    
-    world(castRef).asInstanceOf[T]
   }
   
   private[stm] def store[T](ref: Ref[T])(v: T) {
+    val castRef = ref.asInstanceOf[Ref[Any]]
+    writes += castRef
+    
     world.synchronized {
-      val castRef = ref.asInstanceOf[Ref[Any]]
-      
       if (!version.contains(castRef)) {
         version(castRef) = ref.rev
       }
       
       world(castRef) = v
-      writes += castRef
+    }
+  }
+  
+  private[Transaction] def preserve[T](ref: Ref[T]) {
+    val castRef = ref.asInstanceOf[Ref[Any]]
+    
+    world.synchronized {
+      if (!world.contains(castRef)) {
+        val (v, rev) = ref.contents
+        
+        world(castRef) = v
+        version(castRef) = rev
+      }
     }
   }
   
   private[stm] def commit() = {
     if (world.size > 0) {
       CommitLock.synchronized {
-        val back = world forall { 
-          case (ref, _) => ref.rev == version(ref)
-        }
+        val f = { ref: Ref[Any] => ref.rev == version(ref) }
+        val back = reads.forall(f) && writes.forall(f)
         
         if (back) {
           for (ref <- writes) {
             for (t <- Transaction.active) {
-              // t.retrieve(ref)
+              if (t != this) t.preserve(ref)
             }
             
             ref.contents = (world(ref), rev)
