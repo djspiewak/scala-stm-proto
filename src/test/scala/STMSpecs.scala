@@ -10,9 +10,11 @@ object STMSpecs extends Specification with Scalacheck {
   "type-system magic should compile" in {
     val ref = new Ref(42)
     
+    // covariance
     val subSource: Source[Int] = ref
     val superSource: Source[AnyVal] = ref
     
+    // contravariance
     val objRef = new Ref[Any]
     val subSink: Sink[Any] = objRef
     val superSink: Sink[String] = objRef
