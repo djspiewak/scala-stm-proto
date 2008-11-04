@@ -7,6 +7,7 @@ final class Transaction private[stm] (val rev: Int) extends Context {
   
   private val reads = mutable.Set[Ref[Any]]()
   private val writes = mutable.Set[Ref[Any]]()
+  
   private val version = mutable.Map[Ref[Any], Int]()
   
   private[stm] def retrieve[T](ref: Ref[T]) = {
@@ -69,7 +70,12 @@ final class Transaction private[stm] (val rev: Int) extends Context {
         
         back
       }
+      
     } else true
+  }
+  
+  private implicit def convertOrdered[A](ref: Ref[A]): Ordered[Ref[A]] = new Ordered[Ref[A]] {
+    def compare(that: Ref[A]) = this.hashCode compare that.hashCode
   }
 }
 
