@@ -1,10 +1,8 @@
 import org.specs._
-import org.scalacheck._
 
 import com.codecommit.stm._
 
-object STMSpecs extends Specification with Scalacheck {
-  import Prop._
+object STMSpecs extends Specification {
   import Transaction._
   
   "type-system magic should compile" in {
