@@ -172,6 +172,18 @@ object STMSpecs extends Specification {
       
       !ref mustEqual (IT * NUM)
     }
+    
+    "propagate exceptions" in {
+      var caughtException = false
+      
+      try {
+        atomic { t => throw new RuntimeException("Testing") }
+      } catch {
+        case _:RuntimeException => caughtException = true
+      }
+      
+      caughtException mustEqual true
+    }
   }
   
   def thread(f: =>Unit): Thread = new Thread {
