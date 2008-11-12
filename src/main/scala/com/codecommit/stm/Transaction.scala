@@ -5,7 +5,7 @@ import scala.collection._
 final class Transaction private[stm] (val rev: Int) extends Context {
   private[stm] val world = mutable.Map[Ref[Any], Any]()
   
-  private val reads = mutable.Set[Ref[Any]]()
+  private var reads = immutable.TreeSet[Ref[Any]]()
   private val writes = mutable.Set[Ref[Any]]()
   
   private val version = mutable.Map[Ref[Any], Int]()
@@ -54,7 +54,8 @@ final class Transaction private[stm] (val rev: Int) extends Context {
   
   private[stm] def commit() = {
     if (world.size > 0) {
-      CommitLock.synchronized {
+      writes foreach { _.lock() }
+      try {
         val f = { ref: Ref[Any] => ref.rev == version(ref) }
         val back = reads.forall(f) && writes.forall(f)
         
@@ -69,6 +70,8 @@ final class Transaction private[stm] (val rev: Int) extends Context {
         }
         
         back
+      } finally {
+        writes.foldRight(()) { (r, u) => r.unlock() }		// trick to get the elements in reverse
       }
       
     } else true
@@ -153,5 +156,3 @@ object Transaction {
   
   private case object RetryMessage extends RuntimeException
 }
-
-private[stm] object CommitLock

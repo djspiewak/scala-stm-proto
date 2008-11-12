@@ -1,5 +1,7 @@
 package com.codecommit.stm
 
+import java.util.concurrent.locks.{Lock, ReentrantLock}
+
 trait Source[+T] {
   def unary_!(implicit c: Context) = get(c)
   
@@ -13,6 +15,7 @@ trait Sink[-T] {
 final class Ref[T](v: T) extends Source[T] with Sink[T] {
   private var _contents = (v, 0)    // atomically bind value to revision
   
+  private val commitLock: Lock = new ReentrantLock
   private var blocks = Set[AnyRef]()
   
   /**
@@ -28,6 +31,14 @@ final class Ref[T](v: T) extends Source[T] with Sink[T] {
   }
   
   override def toString = value.toString
+  
+  private[stm] def lock() {
+    commitLock.lock()
+  }
+  
+  private[stm] def unlock() {
+    commitLock.unlock()
+  }
   
   private[stm] def contents = _contents
   
