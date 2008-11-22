@@ -57,7 +57,9 @@ final class Transaction private[stm] (val rev: Int) extends Context {
       writes foreach { _.lock() }
       try {
         val f = { ref: Ref[Any] => ref.rev == version(ref) }
-        val back = reads.forall(f) && writes.forall(f)
+        val back = if (writes.size != 0) {      // allow snapshot read-points
+          reads.forall(f) && writes.forall(f)
+        } else true
         
         if (back) {
           for (ref <- writes) {
