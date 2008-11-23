@@ -59,7 +59,7 @@ final class Transaction private[stm] (val rev: Int) extends Context {
         val f = { ref: Ref[Any] => ref.rev == version(ref) }
         
         // read or write-only transactions should not retry
-        val back = if ((writes.size | reads.size) == 0) {
+        val back = if (writes.size == 0 || reads.size == 0) {
           true
         } else {
           reads.forall(f) && writes.forall(f)
